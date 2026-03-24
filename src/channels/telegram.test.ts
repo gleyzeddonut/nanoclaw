@@ -277,7 +277,7 @@ describe('TelegramChannel', () => {
       );
     });
 
-    it('only emits metadata for unregistered chats', async () => {
+    it('silently ignores messages from unregistered chats', async () => {
       const opts = createTestOpts();
       const channel = new TelegramChannel('test-token', opts);
       await channel.connect();
@@ -285,13 +285,7 @@ describe('TelegramChannel', () => {
       const ctx = createTextCtx({ chatId: 999999, text: 'Unknown chat' });
       await triggerTextMessage(ctx);
 
-      expect(opts.onChatMetadata).toHaveBeenCalledWith(
-        'tg:999999',
-        expect.any(String),
-        'Test Group',
-        'telegram',
-        true,
-      );
+      expect(opts.onChatMetadata).not.toHaveBeenCalled();
       expect(opts.onMessage).not.toHaveBeenCalled();
     });
 

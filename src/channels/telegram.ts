@@ -91,8 +91,15 @@ export class TelegramChannel implements Channel {
       }
 
       const chatJid = `tg:${ctx.chat.id}`;
-      let content = ctx.message.text;
       const timestamp = new Date(ctx.message.date * 1000).toISOString();
+
+      // Allowlist check — only process messages from registered chats
+      if (!this.opts.registeredGroups()[chatJid]) {
+        logger.warn({ chatJid, timestamp }, 'Unauthorized Telegram message ignored');
+        return;
+      }
+
+      let content = ctx.message.text;
       const senderName =
         ctx.from?.first_name ||
         ctx.from?.username ||
@@ -138,17 +145,8 @@ export class TelegramChannel implements Channel {
         isGroup,
       );
 
-      // Only deliver full message for registered groups
-      const group = this.opts.registeredGroups()[chatJid];
-      if (!group) {
-        logger.debug(
-          { chatJid, chatName },
-          'Message from unregistered Telegram chat',
-        );
-        return;
-      }
-
       // Deliver message — startMessageLoop() will pick it up
+      const group = this.opts.registeredGroups()[chatJid];
       this.opts.onMessage(chatJid, {
         id: msgId,
         chat_jid: chatJid,
@@ -168,10 +166,14 @@ export class TelegramChannel implements Channel {
     // Handle non-text messages with placeholders so the agent knows something was sent
     const storeNonText = (ctx: any, placeholder: string) => {
       const chatJid = `tg:${ctx.chat.id}`;
-      const group = this.opts.registeredGroups()[chatJid];
-      if (!group) return;
-
       const timestamp = new Date(ctx.message.date * 1000).toISOString();
+
+      // Allowlist check
+      if (!this.opts.registeredGroups()[chatJid]) {
+        logger.warn({ chatJid, timestamp }, 'Unauthorized Telegram message ignored');
+        return;
+      }
+
       const senderName =
         ctx.from?.first_name ||
         ctx.from?.username ||
